@@ -1,0 +1,9 @@
+{
+  "name": "bnd-repo",
+  "command": {
+    "install": "./install.py",
+    "run": "./main.py"
+  },
+  "bin": "bnd",
+  "version": "0.1.1"
+}
