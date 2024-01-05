@@ -1,7 +1,7 @@
 {
   "name": "bnd-repo",
   "command": {
-    "install": "./install.py",
+    "install": "python3 install.py",
     "run": "./main.py"
   },
   "bin": "bnd",
