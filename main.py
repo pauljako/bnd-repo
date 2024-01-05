@@ -6,7 +6,7 @@ import time
 
 import boundaries
 
-REPO_PATH = os.path.realpath("repos")
+REPO_PATH = os.path.realpath("../../var/bnd-repo/repos")
 REPO_INDEX_FILE = os.path.realpath(os.path.join(REPO_PATH, "index.json"))
 
 
