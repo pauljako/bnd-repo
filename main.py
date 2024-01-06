@@ -75,6 +75,18 @@ def loadrepo(repo_name) -> dict | None:
     return repo
 
 
+def search(name: str, silent=False) -> dict:
+    found = {}
+    repos = getrepos()
+    for repo in repos.keys():
+        index = loadrepo(repo)
+        for pkg in index.keys():
+            if name == pkg or pkg.startswith(name) or pkg.endswith(name):
+                found[pkg] = repo
+                if not silent: print(f"{QUOTE_SYMBOL_INFO}{pkg} ({repo})")
+    return found
+
+
 def get(name, silent: bool = False) -> str | None:
     if not silent: print(f"{QUOTE_SYMBOL_DOING}Searching for {name} in{QUOTE_SYMBOL_DOING}")
     repos = getrepos()
@@ -126,6 +138,6 @@ if __name__ == '__main__':
     elif action == "update":
         update_index_files()
     elif action == "search":
-        search()
+        search(sys.argv[2])
     else:
         print(f"{QUOTE_SYMBOL_ERROR}Invalid Command \"{action}\"{QUOTE_SYMBOL_ERROR}")
