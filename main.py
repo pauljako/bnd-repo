@@ -24,7 +24,9 @@ QUOTE_SYMBOL_WARNING = f"{Colors.BOLD}{Colors.WARNING}::{Colors.ENDC}"
 QUOTE_SYMBOL_INFO = f"{Colors.BOLD}{Colors.OKGREEN}::{Colors.ENDC}"
 QUOTE_SYMBOL_ERROR = f"{Colors.BOLD}{Colors.FAIL}::{Colors.ENDC}"
 
-REPO_PATH = os.path.realpath("../../var/bnd-repo/repos")
+os.chdir(os.path.realpath(os.path.expanduser(os.environ.get("APP_DIR", "~/boundaries/apps/bnd-repo"))))
+
+REPO_PATH = os.path.realpath(os.path.expanduser(os.environ.get("VAR_DIR", "~/boundaries/var/bnd-repo")))
 REPO_INDEX_FILE = os.path.realpath(os.path.join(REPO_PATH, "index.json"))
 
 
