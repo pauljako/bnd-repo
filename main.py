@@ -26,7 +26,7 @@ QUOTE_SYMBOL_ERROR = f"{Colors.BOLD}{Colors.FAIL}::{Colors.ENDC}"
 
 os.chdir(os.path.realpath(os.path.expanduser(os.environ.get("APP_DIR", "~/boundaries/apps/bnd-repo"))))
 
-REPO_PATH = os.path.realpath(os.path.expanduser(os.environ.get("VAR_DIR", "~/boundaries/var/bnd-repo")))
+REPO_PATH = os.path.realpath(os.path.expanduser(os.path.join(os.environ.get("VAR_DIR", "~/boundaries/var/bnd-repo"), "repos")))
 REPO_INDEX_FILE = os.path.realpath(os.path.join(REPO_PATH, "index.json"))
 
 
