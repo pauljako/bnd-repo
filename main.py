@@ -1,9 +1,12 @@
 #!/bin/python3
 import json
 import os
+import requests
 import sys
 import time
-
+from urllib.request import urlretrieve
+from requests_html import HTMLSession
+from requests import utils
 import boundaries
 
 
@@ -42,6 +45,14 @@ def getrepos() -> dict | None:
 
 def update_index_files(silent: bool = False):
     repos = getrepos()
+    headers = utils.default_headers()
+
+    headers.update(
+        {
+            'User-Agent': 'My User Agent 1.0',
+        }
+    )
+
     for r, u in repos.items():
         repo_file_path = os.path.realpath(os.path.join(REPO_PATH, r + ".json"))
         if os.path.exists(repo_file_path):
@@ -49,9 +60,14 @@ def update_index_files(silent: bool = False):
         else:
             cached = False
         if not silent: print(f"{QUOTE_SYMBOL_DOING}Updating {r} Repository{QUOTE_SYMBOL_DOING}")
-        time.sleep(0.2)
-        os.system(f"curl {u}/index.json > temp.json")
-        time.sleep(0.2)
+        time.sleep(2)
+        urlretrieve(f"{u}/index.json", "temp.json")
+        # session = HTMLSession()
+        # req = session.get(f"{u}/index.json", allow_redirects=True, headers=headers)
+        # req.html.render()
+        # with open("temp.json", "wb") as f:
+        #     f.write(req.content)
+        time.sleep(2)
         with open("temp.json", "rt") as f:
             rf = f.read()
         if rf.startswith("{"):
@@ -65,7 +81,7 @@ def update_index_files(silent: bool = False):
                 if not silent: print(f"{QUOTE_SYMBOL_ERROR}Could not Update {r} Repository{QUOTE_SYMBOL_ERROR}")
                 with open(repo_file_path, "w") as f:
                     f.write("{}")
-            os.remove("temp.json")
+            #os.remove("temp.json")
 
 
 def loadrepo(repo_name) -> dict | None:
@@ -109,9 +125,16 @@ def get(name, silent: bool = False) -> str | None:
     time.sleep(0.2)
     repo = loadrepo(selected_repo)
     server_filepath: str = repo[name]
-    filename = server_filepath.split("/")[-1]
+    filename = server_filepath.split("/")[-1] + ".tar.gz"
     print(filename)
-    dls = os.system(f"curl {os.path.join(repos[selected_repo], server_filepath)} > {filename}")
+    urlretrieve(f"{os.path.join(repos[selected_repo], server_filepath)}/index.json", "index.json")
+    with open("index.json", "rt") as f:
+        chunks = json.loads(f.read())
+    cur_chunk = 1
+    for p in chunks:
+        if not silent: print(f"\n{QUOTE_SYMBOL_DOING}Downloading Chunk {cur_chunk}/{len(chunks)}{QUOTE_SYMBOL_DOING}")
+        os.system(f"curl {os.path.join(repos[selected_repo], server_filepath)}/{p} >> {filename}")
+        cur_chunk += 1
     return filename
 
 
