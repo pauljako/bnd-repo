@@ -33,6 +33,14 @@ REPO_PATH = os.path.realpath(os.path.expanduser(os.path.join(VAR_DIR, "repos")))
 REPO_INDEX_FILE = os.path.realpath(os.path.join(REPO_PATH, "index.json"))
 
 
+def report_hook(block_count, block_size, file_size):
+    downloaded = block_count * block_size
+    percentage = round(downloaded / file_size * 100)
+    downloaded = round(downloaded / 1000000, 1)
+    size = round(file_size / 1000000, 1)
+    print(f"{QUOTE_SYMBOL_DOING}Downloading: {downloaded}MB/{size}MB ({percentage}%){QUOTE_SYMBOL_DOING}", end="\r")
+
+
 def getrepos() -> dict | None:
     if os.path.exists(REPO_INDEX_FILE):
         with open(REPO_INDEX_FILE, "rb") as f:
@@ -110,7 +118,7 @@ def get(name, silent: bool = False) -> str | None:
     if selected_repo is None:
         if not silent: print(f"\n{QUOTE_SYMBOL_ERROR}{name} could not be found{QUOTE_SYMBOL_ERROR}")
         return None
-    if not silent: print(f"\n{QUOTE_SYMBOL_DOING}Downloading {name} from {selected_repo}{QUOTE_SYMBOL_DOING}")
+    if not silent: print(f"\n{QUOTE_SYMBOL_DOING}Downloading {name} from {selected_repo}{QUOTE_SYMBOL_DOING}", end="")
     time.sleep(0.2)
     repo = loadrepo(selected_repo)
     server_filepath: str = repo[name]
@@ -121,7 +129,9 @@ def get(name, silent: bool = False) -> str | None:
     cur_chunk = 1
     for p in chunks:
         if not silent: print(f"\n{QUOTE_SYMBOL_DOING}Downloading Chunk {cur_chunk}/{len(chunks)}{QUOTE_SYMBOL_DOING}")
-        os.system(f"curl {os.path.join(repos[selected_repo], server_filepath)}/{p} >> {filename}")
+        urlretrieve(f"{os.path.join(repos[selected_repo], server_filepath)}/{p}", "tmp", reporthook=report_hook)
+        os.system(f"cat tmp >> {filename}")
+        os.remove("tmp")
         cur_chunk += 1
     return filename
 
