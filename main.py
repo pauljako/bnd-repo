@@ -1,12 +1,9 @@
 #!/bin/python3
 import json
 import os
-import requests
 import sys
 import time
 from urllib.request import urlretrieve
-from requests_html import HTMLSession
-from requests import utils
 import boundaries
 
 
@@ -22,14 +19,17 @@ class Colors:
     UNDERLINE = '\033[4m'
 
 
-QUOTE_SYMBOL_DOING = f"{Colors.BOLD}{Colors.OKCYAN}::{Colors.ENDC}"
-QUOTE_SYMBOL_WARNING = f"{Colors.BOLD}{Colors.WARNING}::{Colors.ENDC}"
-QUOTE_SYMBOL_INFO = f"{Colors.BOLD}{Colors.OKGREEN}::{Colors.ENDC}"
-QUOTE_SYMBOL_ERROR = f"{Colors.BOLD}{Colors.FAIL}::{Colors.ENDC}"
+QUOTE_SYMBOL_DOING = f" {Colors.BOLD}{Colors.OKCYAN}::{Colors.ENDC} "
+QUOTE_SYMBOL_WARNING = f" {Colors.BOLD}{Colors.WARNING}::{Colors.ENDC} "
+QUOTE_SYMBOL_INFO = f" {Colors.BOLD}{Colors.OKGREEN}::{Colors.ENDC} "
+QUOTE_SYMBOL_ERROR = f" {Colors.BOLD}{Colors.FAIL}::{Colors.ENDC} "
+QUOTE_SYMBOL_OUTPUT = f" {Colors.BOLD}{Colors.OKBLUE}::{Colors.ENDC} "
 
-os.chdir(os.path.realpath(os.path.expanduser(os.environ.get("APP_DIR", "~/boundaries/apps/bnd-repo"))))
+VAR_DIR = os.path.realpath(os.path.expanduser(os.environ.get("VAR_DIR", "~/boundaries/var/bnd-repo")))
 
-REPO_PATH = os.path.realpath(os.path.expanduser(os.path.join(os.environ.get("VAR_DIR", "~/boundaries/var/bnd-repo"), "repos")))
+os.chdir(os.path.join(VAR_DIR, "tmp"))
+
+REPO_PATH = os.path.realpath(os.path.expanduser(os.path.join(VAR_DIR, "repos")))
 REPO_INDEX_FILE = os.path.realpath(os.path.join(REPO_PATH, "index.json"))
 
 
@@ -45,13 +45,6 @@ def getrepos() -> dict | None:
 
 def update_index_files(silent: bool = False):
     repos = getrepos()
-    headers = utils.default_headers()
-
-    headers.update(
-        {
-            'User-Agent': 'My User Agent 1.0',
-        }
-    )
 
     for r, u in repos.items():
         repo_file_path = os.path.realpath(os.path.join(REPO_PATH, r + ".json"))
@@ -60,14 +53,9 @@ def update_index_files(silent: bool = False):
         else:
             cached = False
         if not silent: print(f"{QUOTE_SYMBOL_DOING}Updating {r} Repository{QUOTE_SYMBOL_DOING}")
-        time.sleep(2)
+        time.sleep(0.5)
         urlretrieve(f"{u}/index.json", "temp.json")
-        # session = HTMLSession()
-        # req = session.get(f"{u}/index.json", allow_redirects=True, headers=headers)
-        # req.html.render()
-        # with open("temp.json", "wb") as f:
-        #     f.write(req.content)
-        time.sleep(2)
+        time.sleep(0.5)
         with open("temp.json", "rt") as f:
             rf = f.read()
         if rf.startswith("{"):
@@ -81,7 +69,7 @@ def update_index_files(silent: bool = False):
                 if not silent: print(f"{QUOTE_SYMBOL_ERROR}Could not Update {r} Repository{QUOTE_SYMBOL_ERROR}")
                 with open(repo_file_path, "w") as f:
                     f.write("{}")
-            #os.remove("temp.json")
+            os.remove("temp.json")
 
 
 def loadrepo(repo_name) -> dict | None:
@@ -96,12 +84,13 @@ def loadrepo(repo_name) -> dict | None:
 def search(name: str, silent=False) -> dict:
     found = {}
     repos = getrepos()
+    if not silent: print(f"{QUOTE_SYMBOL_OUTPUT}Results for {name}:")
     for repo in repos.keys():
         index = loadrepo(repo)
         for pkg in index.keys():
             if name == pkg or pkg.startswith(name) or pkg.endswith(name):
                 found[pkg] = repo
-                if not silent: print(f"{QUOTE_SYMBOL_INFO}{pkg} ({repo})")
+                if not silent: print(f"{QUOTE_SYMBOL_OUTPUT}{pkg} ({repo})")
     return found
 
 
@@ -126,7 +115,6 @@ def get(name, silent: bool = False) -> str | None:
     repo = loadrepo(selected_repo)
     server_filepath: str = repo[name]
     filename = server_filepath.split("/")[-1] + ".tar.gz"
-    print(filename)
     urlretrieve(f"{os.path.join(repos[selected_repo], server_filepath)}/index.json", "index.json")
     with open("index.json", "rt") as f:
         chunks = json.loads(f.read())
@@ -147,7 +135,7 @@ if __name__ == '__main__':
     if action == "install":
         dl_pkg = get(sys.argv[2])
         if dl_pkg is None:
-            if input(f"{QUOTE_SYMBOL_ERROR}Download Error. Do you want to Update the Repository? (Y/n) ") != "n":
+            if input(f"{QUOTE_SYMBOL_ERROR}Download Error. Do you want to Update the Repositories? (Y/n) ") != "n":
                 update_index_files()
                 dl_pkg = get(sys.argv[2])
                 if dl_pkg is None:
