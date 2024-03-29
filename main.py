@@ -34,15 +34,17 @@ REPO_INDEX_FILE = os.path.realpath(os.path.join(REPO_PATH, "index.json"))
 
 cur_chunk: int
 total_chunks: int
+do_not_give_output: bool
 
 
 def report_hook(block_count, block_size, file_size):
-    global cur_chunk, total_chunks
+    global cur_chunk, total_chunks, do_not_give_output
     downloaded = block_count * block_size
     percentage = round(downloaded / file_size * 100)
     downloaded = round(downloaded / 1000000, 1)
     size = round(file_size / 1000000, 1)
-    print(f"{QUOTE_SYMBOL_DOING}Downloading Chunk {cur_chunk}/{total_chunks}: {downloaded}MB/{size}MB ({percentage}%){QUOTE_SYMBOL_DOING}", end="     \r")
+    if not do_not_give_output:
+        print(f"{QUOTE_SYMBOL_DOING}Downloading Chunk {cur_chunk}/{total_chunks}: {downloaded}MB/{size}MB ({percentage}%){QUOTE_SYMBOL_DOING}", end="     \r")
 
 
 def getrepos() -> dict | None:
@@ -95,7 +97,7 @@ def loadrepo(repo_name) -> dict | None:
     return repo
 
 
-def search(name: str, silent=False) -> dict:
+def search(name: str, silent: bool = False) -> dict:
     found = {}
     repos = getrepos()
     if not silent: print(f"{QUOTE_SYMBOL_OUTPUT}Results for {name}:")
@@ -108,7 +110,7 @@ def search(name: str, silent=False) -> dict:
     return found
 
 
-def list_all(silent=False) -> dict:
+def list_all(silent: bool = False) -> dict:
     pkgs = {}
     repos = getrepos()
     if not silent: print(f"{QUOTE_SYMBOL_OUTPUT}List of all available packages:")
@@ -121,7 +123,7 @@ def list_all(silent=False) -> dict:
 
 
 def get(name, silent: bool = False) -> str | None:
-    global cur_chunk, total_chunks
+    global cur_chunk, total_chunks, do_not_give_output
     if not silent: print(f"{QUOTE_SYMBOL_DOING}Searching for {name} in{QUOTE_SYMBOL_DOING}")
     repos = getrepos()
     selected_repo = None
@@ -149,6 +151,7 @@ def get(name, silent: bool = False) -> str | None:
         chunks = json.loads(f.read())
     cur_chunk = 1
     total_chunks = len(chunks)
+    do_not_give_output = silent
     if not silent: print("")
     for p in chunks:
         urlretrieve(f"{os.path.join(repos[selected_repo], server_filepath)}/{p}", "tmp", reporthook=report_hook)
