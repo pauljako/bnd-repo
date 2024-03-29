@@ -32,13 +32,17 @@ os.chdir(os.path.join(VAR_DIR, "tmp"))
 REPO_PATH = os.path.realpath(os.path.expanduser(os.path.join(VAR_DIR, "repos")))
 REPO_INDEX_FILE = os.path.realpath(os.path.join(REPO_PATH, "index.json"))
 
+cur_chunk: int
+total_chunks: int
+
 
 def report_hook(block_count, block_size, file_size):
+    global cur_chunk, total_chunks
     downloaded = block_count * block_size
     percentage = round(downloaded / file_size * 100)
     downloaded = round(downloaded / 1000000, 1)
     size = round(file_size / 1000000, 1)
-    print(f"{QUOTE_SYMBOL_DOING}Downloading: {downloaded}MB/{size}MB ({percentage}%){QUOTE_SYMBOL_DOING}", end="\r")
+    print(f"{QUOTE_SYMBOL_DOING}Downloading Chunk {cur_chunk}/{total_chunks}: {downloaded}MB/{size}MB ({percentage}%){QUOTE_SYMBOL_DOING}", end="     \r")
 
 
 def getrepos() -> dict | None:
@@ -61,15 +65,17 @@ def update_index_files(silent: bool = False):
         else:
             cached = False
         if not silent: print(f"{QUOTE_SYMBOL_DOING}Updating {r} Repository{QUOTE_SYMBOL_DOING}")
-        time.sleep(0.5)
+        time.sleep(0.2)
         urlretrieve(f"{u}/index.json", "temp.json")
-        time.sleep(0.5)
+        time.sleep(0.2)
         with open("temp.json", "rt") as f:
             rf = f.read()
         if rf.startswith("{"):
             if cached:
                 os.remove(repo_file_path)
             os.rename("temp.json", repo_file_path)
+            number_of_packages = len(json.loads(rf))
+            if not silent: print(f"{QUOTE_SYMBOL_INFO}Updated {r} Repository. {number_of_packages} Packages available{QUOTE_SYMBOL_INFO}")
         else:
             if cached:
                 if not silent: print(f"{QUOTE_SYMBOL_WARNING}Could not Update {r} Repository, using cached{QUOTE_SYMBOL_WARNING}")
@@ -102,7 +108,20 @@ def search(name: str, silent=False) -> dict:
     return found
 
 
+def list_all(silent=False) -> dict:
+    pkgs = {}
+    repos = getrepos()
+    if not silent: print(f"{QUOTE_SYMBOL_OUTPUT}List of all available packages:")
+    for repo in repos.keys():
+        index = loadrepo(repo)
+        for pkg in index.keys():
+            pkgs[pkg] = repo
+            if not silent: print(f"{QUOTE_SYMBOL_OUTPUT}{pkg} ({repo})")
+    return pkgs
+
+
 def get(name, silent: bool = False) -> str | None:
+    global cur_chunk, total_chunks
     if not silent: print(f"{QUOTE_SYMBOL_DOING}Searching for {name} in{QUOTE_SYMBOL_DOING}")
     repos = getrepos()
     selected_repo = None
@@ -127,19 +146,21 @@ def get(name, silent: bool = False) -> str | None:
     with open("index.json", "rt") as f:
         chunks = json.loads(f.read())
     cur_chunk = 1
+    total_chunks = len(chunks)
+    if not silent: print("")
     for p in chunks:
-        if not silent: print(f"\n{QUOTE_SYMBOL_DOING}Downloading Chunk {cur_chunk}/{len(chunks)}{QUOTE_SYMBOL_DOING}")
         urlretrieve(f"{os.path.join(repos[selected_repo], server_filepath)}/{p}", "tmp", reporthook=report_hook)
         os.system(f"cat tmp >> {filename}")
         os.remove("tmp")
         cur_chunk += 1
+    if not silent: print("")
     return filename
 
 
 if __name__ == '__main__':
     try:
         action = sys.argv[1]
-    except:
+    except IndexError:
         print(f"{QUOTE_SYMBOL_ERROR}No Argument given{QUOTE_SYMBOL_ERROR}")
         action = ""
     if action == "install":
@@ -162,5 +183,7 @@ if __name__ == '__main__':
         update_index_files()
     elif action == "search":
         search(sys.argv[2])
+    elif action == "list":
+        list_all()
     else:
-        print(f"{QUOTE_SYMBOL_ERROR}Invalid Command \"{action}\"{QUOTE_SYMBOL_ERROR}")
+        print(f"{QUOTE_SYMBOL_ERROR}Unknown Command \"{action}\"{QUOTE_SYMBOL_ERROR}")
