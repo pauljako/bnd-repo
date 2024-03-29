@@ -142,6 +142,8 @@ def get(name, silent: bool = False) -> str | None:
     repo = loadrepo(selected_repo)
     server_filepath: str = repo[name]
     filename = server_filepath.split("/")[-1] + ".tar.gz"
+    if os.path.exists(filename):
+        os.remove(filename)
     urlretrieve(f"{os.path.join(repos[selected_repo], server_filepath)}/index.json", "index.json")
     with open("index.json", "rt") as f:
         chunks = json.loads(f.read())
