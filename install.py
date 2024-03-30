@@ -15,6 +15,10 @@ if not os.path.exists("../../var/bnd-repo/repos"):
     with open("../../var/bnd-repo/repos/index.json", "w") as f:
         f.write("{}")
 
+if not os.path.exists("../../var/bnd-repo/config.json"):
+    with open("../../var/bnd-repo/config.json", "w") as f:
+        f.write("{}")
+
 import main
 
 main.update_index_files()
