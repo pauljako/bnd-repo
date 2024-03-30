@@ -4,6 +4,8 @@ A Repository Manager for boundaries.
 # Usage
 - Installation: `bnd install <package name>`
 - Update Repository Index: `bnd update`
+- Search for Packages: `bnd search <search term>`
+- List all installable Packages: `bnd list`
 
 # Installation
 ## Step 1
