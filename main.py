@@ -31,10 +31,23 @@ os.chdir(os.path.join(VAR_DIR, "tmp"))
 
 REPO_PATH = os.path.realpath(os.path.expanduser(os.path.join(VAR_DIR, "repos")))
 REPO_INDEX_FILE = os.path.realpath(os.path.join(REPO_PATH, "index.json"))
+CONFIG_PATH = os.path.realpath(os.path.expanduser(os.path.join(VAR_DIR, "config.json")))
 
 cur_chunk: int
 total_chunks: int
 do_not_give_output: bool
+config = {"silent": False}
+
+
+def load_config():
+    global config, CONFIG_PATH
+    with open(CONFIG_PATH, "rb") as f:
+        config = json.load(f)
+    if "silent" not in config:
+        config["silent"] = False
+
+
+load_config()
 
 
 def report_hook(block_count, block_size, file_size):
@@ -44,7 +57,9 @@ def report_hook(block_count, block_size, file_size):
     downloaded = round(downloaded / 1000000, 1)
     size = round(file_size / 1000000, 1)
     if not do_not_give_output:
-        print(f"{QUOTE_SYMBOL_DOING}Downloading Chunk {cur_chunk}/{total_chunks}: {downloaded}MB/{size}MB ({percentage}%){QUOTE_SYMBOL_DOING}", end="     \r")
+        print(
+            f"{QUOTE_SYMBOL_DOING}Downloading Chunk {cur_chunk}/{total_chunks}: {downloaded}MB/{size}MB ({percentage}%){QUOTE_SYMBOL_DOING}",
+            end="     \r")
 
 
 def getrepos() -> dict | None:
@@ -77,10 +92,12 @@ def update_index_files(silent: bool = False):
                 os.remove(repo_file_path)
             os.rename("temp.json", repo_file_path)
             number_of_packages = len(json.loads(rf))
-            if not silent: print(f"{QUOTE_SYMBOL_INFO}Updated {r} Repository. {number_of_packages} Packages available{QUOTE_SYMBOL_INFO}")
+            if not silent: print(
+                f"{QUOTE_SYMBOL_INFO}Updated {r} Repository. {number_of_packages} Packages available{QUOTE_SYMBOL_INFO}")
         else:
             if cached:
-                if not silent: print(f"{QUOTE_SYMBOL_WARNING}Could not Update {r} Repository, using cached{QUOTE_SYMBOL_WARNING}")
+                if not silent: print(
+                    f"{QUOTE_SYMBOL_WARNING}Could not Update {r} Repository, using cached{QUOTE_SYMBOL_WARNING}")
             else:
                 if not silent: print(f"{QUOTE_SYMBOL_ERROR}Could not Update {r} Repository{QUOTE_SYMBOL_ERROR}")
                 with open(repo_file_path, "w") as f:
@@ -163,13 +180,14 @@ def get(name, silent: bool = False) -> str | None:
 
 
 if __name__ == '__main__':
+    muted = config["silent"]
     try:
         action = sys.argv[1]
     except IndexError:
         print(f"{QUOTE_SYMBOL_ERROR}No Argument given{QUOTE_SYMBOL_ERROR}")
         action = ""
     if action == "install":
-        dl_pkg = get(sys.argv[2])
+        dl_pkg = get(sys.argv[2], muted)
         if dl_pkg is None:
             if input(f"{QUOTE_SYMBOL_ERROR}Download Error. Do you want to Update the Repositories? (Y/n) ") != "n":
                 update_index_files()
@@ -185,7 +203,7 @@ if __name__ == '__main__':
             print(f"{QUOTE_SYMBOL_ERROR}{sys.argv[2]} was not installed successfully{QUOTE_SYMBOL_ERROR}")
         if os.path.exists(dl_pkg): os.remove(dl_pkg)
     elif action == "update":
-        update_index_files()
+        update_index_files(muted)
     elif action == "search":
         search(sys.argv[2])
     elif action == "list":
