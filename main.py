@@ -54,8 +54,12 @@ def report_hook(block_count, block_size, file_size):
     global cur_chunk, total_chunks, do_not_give_output
     downloaded = block_count * block_size
     percentage = round(downloaded / file_size * 100)
+    if percentage > 100:
+        percentage = 100
     downloaded = round(downloaded / 1000000, 1)
     size = round(file_size / 1000000, 1)
+    if downloaded > size:
+        downloaded = size
     if not do_not_give_output:
         print(
             f"{QUOTE_SYMBOL_DOING}Downloading Chunk {cur_chunk}/{total_chunks}: {downloaded}MB/{size}MB ({percentage}%){QUOTE_SYMBOL_DOING}",
