@@ -123,7 +123,11 @@ def search(name: str, silent: bool = False) -> dict:
         for pkg in index.keys():
             if name == pkg or pkg.startswith(name) or pkg.endswith(name):
                 found[pkg] = repo
-                if not silent: print(f"{QUOTE_SYMBOL_OUTPUT}{pkg} ({repo})")
+                if "version" in index[pkg]:
+                    version = f", Version: {index[pkg]['version']}"
+                else:
+                    version = ""
+                if not silent: print(f"{QUOTE_SYMBOL_OUTPUT}{pkg} (Repository: {repo}{version})")
     return found
 
 
@@ -135,7 +139,11 @@ def list_all(silent: bool = False) -> dict:
         index = loadrepo(repo)
         for pkg in index.keys():
             pkgs[pkg] = repo
-            if not silent: print(f"{QUOTE_SYMBOL_OUTPUT}{pkg} ({repo})")
+            if "version" in index[pkg]:
+                version = f", Version: {index[pkg]['version']}"
+            else:
+                version = ""
+            if not silent: print(f"{QUOTE_SYMBOL_OUTPUT}{pkg} (Repository: {repo}{version})")
     return pkgs
 
 
@@ -159,8 +167,13 @@ def get(name, silent: bool = False) -> str | None:
     if not silent: print(f"\n{QUOTE_SYMBOL_DOING}Downloading {name} from {selected_repo}{QUOTE_SYMBOL_DOING}", end="")
     time.sleep(0.2)
     repo = loadrepo(selected_repo)
-    server_filepath: str = repo[name]
-    filename = server_filepath.split("/")[-1] + ".tar.gz"
+    obj_in_repo = repo[name]
+    server_filepath: str = obj_in_repo["url"]
+    if "suffix" in obj_in_repo:
+        suffix = obj_in_repo["suffix"]
+    else:
+        suffix = "tar.gz"
+    filename = server_filepath.split("/")[-1] + "." + suffix
     if os.path.exists(filename):
         os.remove(filename)
     urlretrieve(f"{os.path.join(repos[selected_repo], server_filepath)}/index.json", "index.json")
