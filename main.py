@@ -118,20 +118,29 @@ def loadrepo(repo_name) -> dict | None:
     return repo
 
 
-def search(name: str, silent: bool = False) -> dict:
+def search(name: str, silent: bool = False, exact: bool = False) -> dict:
     found = {}
     repos = getrepos()
     if not silent: print(f"{QUOTE_SYMBOL_OUTPUT}Results for {name}:")
     for repo in repos.keys():
         index = loadrepo(repo)
         for pkg in index.keys():
-            if name == pkg or pkg.startswith(name) or pkg.endswith(name):
-                found[pkg] = repo
-                if "version" in index[pkg]:
-                    version = f", Version: {index[pkg]['version']}"
-                else:
-                    version = ""
-                if not silent: print(f"{QUOTE_SYMBOL_OUTPUT}{pkg} (Repository: {repo}{version})")
+            if not exact:
+                if name == pkg or pkg.startswith(name) or pkg.endswith(name):
+                    found[pkg] = repo
+                    if "version" in index[pkg]:
+                        version = f", Version: {index[pkg]['version']}"
+                    else:
+                        version = ""
+                    if not silent: print(f"{QUOTE_SYMBOL_OUTPUT}{pkg} (Repository: {repo}{version})")
+            else:
+                if name == pkg:
+                    found[pkg] = repo
+                    if "version" in index[pkg]:
+                        version = f", Version: {index[pkg]['version']}"
+                    else:
+                        version = ""
+                    if not silent: print(f"{QUOTE_SYMBOL_OUTPUT}{pkg} (Repository: {repo}{version})")
     return found
 
 
@@ -196,6 +205,49 @@ def get(name, silent: bool = False) -> str | None:
     return filename
 
 
+def get_outdated_packages(silent: bool = False) -> list:
+    outdated_pkgs = []
+    pkgs = boundaries.get_packages()
+    if not silent: print(f"{QUOTE_SYMBOL_OUTPUT}List of outdated Packages:")
+    for pkg in pkgs:
+        info = boundaries.getpkginfo(pkg)
+        if info is not None and ("version" in info):
+            result = search(pkg, True, True)
+            if pkg in result:
+                contained_repo = loadrepo(result[pkg])
+                if pkg in contained_repo:
+                    pkg_in_repo = contained_repo[pkg]
+                    if "version" in pkg_in_repo:
+                        if pkg_in_repo["version"] != info["version"]:
+                            if not silent: print(f"{QUOTE_SYMBOL_OUTPUT}{pkg} (Installed: {info['version']}, Available: {pkg_in_repo['version']})")
+                            outdated_pkgs.append(pkg)
+    return outdated_pkgs
+
+
+def install(pkg, silent: bool = False) -> bool:
+    dl_pkg = get(pkg, silent)
+    if dl_pkg is None:
+        if not silent: print(f"{QUOTE_SYMBOL_ERROR}Download Error. Please update your Repositories{QUOTE_SYMBOL_ERROR}")
+        return False
+    result = boundaries.install(dl_pkg)
+    if os.path.exists(dl_pkg):
+        os.remove(dl_pkg)
+    if result:
+        if not silent: print(f"{QUOTE_SYMBOL_INFO}{pkg} was installed successfully{QUOTE_SYMBOL_INFO}")
+        return True
+    else:
+        if not silent: print(f"{QUOTE_SYMBOL_ERROR}{pkg} was not installed successfully{QUOTE_SYMBOL_ERROR}")
+        return False
+
+
+def upgrade_outdated(silent: bool = False):
+    outdated = get_outdated_packages(silent)
+    if not silent: print(f"{QUOTE_SYMBOL_WARNING}Installing in 3 Seconds{QUOTE_SYMBOL_WARNING}")
+    time.sleep(3)
+    for i in outdated:
+        install(i, silent)
+
+
 if __name__ == '__main__':
     muted = config["silent"]
     try:
@@ -204,26 +256,16 @@ if __name__ == '__main__':
         print(f"{QUOTE_SYMBOL_ERROR}No Argument given{QUOTE_SYMBOL_ERROR}")
         action = ""
     if action == "install":
-        dl_pkg = get(sys.argv[2], muted)
-        if dl_pkg is None:
-            if input(f"{QUOTE_SYMBOL_ERROR}Download Error. Do you want to Update the Repositories? (Y/n) ") != "n":
-                update_index_files()
-                dl_pkg = get(sys.argv[2])
-                if dl_pkg is None:
-                    print(f"{QUOTE_SYMBOL_ERROR}Download Error.{QUOTE_SYMBOL_ERROR}")
-                    exit()
-            else:
-                exit()
-        if boundaries.install(dl_pkg):
-            print(f"{QUOTE_SYMBOL_INFO}{sys.argv[2]} was installed successfully{QUOTE_SYMBOL_INFO}")
-        else:
-            print(f"{QUOTE_SYMBOL_ERROR}{sys.argv[2]} was not installed successfully{QUOTE_SYMBOL_ERROR}")
-        if os.path.exists(dl_pkg): os.remove(dl_pkg)
+        install(sys.argv[2])
     elif action == "update":
         update_index_files(muted)
     elif action == "search":
         search(sys.argv[2])
     elif action == "list":
         list_all()
+    elif action == "list-outdated":
+        get_outdated_packages()
+    elif action == "upgrade":
+        upgrade_outdated(muted)
     else:
         print(f"{QUOTE_SYMBOL_ERROR}Unknown Command \"{action}\"{QUOTE_SYMBOL_ERROR}")
