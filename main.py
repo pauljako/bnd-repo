@@ -1,4 +1,5 @@
 #!/bin/python3
+import argparse
 import json
 import os
 import sys
@@ -224,7 +225,7 @@ def get_outdated_packages(silent: bool = False) -> list:
     return outdated_pkgs
 
 
-def install(pkg, silent: bool = False) -> bool:
+def install(pkg, silent: bool = False, from_repo: str = None) -> bool:
     dl_pkg = get(pkg, silent)
     if dl_pkg is None:
         if not silent: print(f"{QUOTE_SYMBOL_ERROR}Download Error. Please update your Repositories{QUOTE_SYMBOL_ERROR}")
@@ -249,23 +250,39 @@ def upgrade_outdated(silent: bool = False):
 
 
 if __name__ == '__main__':
+    
+    parser = argparse.ArgumentParser(prog="bnd-repo", description="The boundaries Repository Manager")
+    
+    subcommand = parser.add_subparsers(title="Actions", dest="action")
+    
+    install_parser = subcommand.add_parser(name="install", help="Install a Package")
+    install_parser.add_argument("--force-repo", help="Force the use of a specific Repository", default=None, dest="fromrepo")
+    install_parser.add_argument("package", help="The Package to install")
+    
+    update_parser = subcommand.add_parser(name="update", help="Update the Repositories")
+    
+    search_parser = subcommand.add_parser(name="search", help="Search for Packages")
+    search_parser.add_argument("--force-repo", help="Force the use of a specific Repository")
+    search_parser.add_argument("term", help="The Search Term")
+    
+    list_parser = subcommand.add_parser(name="list", help="List available Packages")
+    list_parser.add_argument("--outdated", action="store_true", help="Only List outdated Packages")
+    
+    upgrade_parser = subcommand.add_parser(name="upgrade", help="Upgrade outdated Packages")
+    
+    args = parser.parse_args()
+    
     muted = config["silent"]
-    try:
-        action = sys.argv[1]
-    except IndexError:
-        print(f"{QUOTE_SYMBOL_ERROR}No Argument given{QUOTE_SYMBOL_ERROR}")
-        action = ""
-    if action == "install":
-        install(sys.argv[2])
-    elif action == "update":
+    
+    if args.action == "install":
+        install(args.package, from_repo=args.fromrepo)
+    elif args.action == "update":
         update_index_files(muted)
-    elif action == "search":
+    elif args.action == "search":
         search(sys.argv[2])
-    elif action == "list":
+    elif args.action == "list" and not args.outdated:
         list_all()
-    elif action == "list-outdated":
+    elif args.action == "list" and args.outdated:
         get_outdated_packages()
-    elif action == "upgrade":
+    elif args.action == "upgrade":
         upgrade_outdated(muted)
-    else:
-        print(f"{QUOTE_SYMBOL_ERROR}Unknown Command \"{action}\"{QUOTE_SYMBOL_ERROR}")
