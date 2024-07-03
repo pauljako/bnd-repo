@@ -76,6 +76,9 @@ def getrepos() -> dict | None:
         return None
     return repo_index
 
+def setrepos(repo: dict):
+    with open(file=REPO_INDEX_FILE, mode="wt") as f:
+        json.dump(obj=repo, fp=f)
 
 def update_index_files(silent: bool = False):
     repos = getrepos()
@@ -174,6 +177,15 @@ def list_all(silent: bool = False, from_repo: str = None) -> dict:
             if not silent: print(f"{QUOTE_SYMBOL_OUTPUT}{pkg} (Repository: {repo}{version})")
     return pkgs
 
+def add_repo(name: str, url: str):
+    repo = getrepos()
+    repo[name] = url
+    setrepos(repo)
+    
+def remove_repo(name: str):
+    repo = getrepos()
+    repo.pop(name)
+    setrepos(repo)
 
 def get(name, silent: bool = False, from_repo: str = None) -> str | None:
     global cur_chunk, total_chunks, do_not_give_output
@@ -272,7 +284,7 @@ def upgrade_outdated(silent: bool = False):
 
 if __name__ == '__main__':
     
-    parser = argparse.ArgumentParser(prog="bnd-repo", description="The boundaries Repository Manager")
+    parser = argparse.ArgumentParser(prog="bnd", description="The boundaries Repository Manager")
     
     subcommand = parser.add_subparsers(title="Actions", dest="action")
     
@@ -298,7 +310,10 @@ if __name__ == '__main__':
     
     add_repo_parser = repo_subcommand.add_parser(name="add", help="Add a Repository")
     add_repo_parser.add_argument("name", help="The Name of the Repository")
-    add_repo_parser.add_argument("url", "The Path/Url to the Repository")
+    add_repo_parser.add_argument("url", help="The Path/Url to the Repository")
+    
+    remove_repo_parser = repo_subcommand.add_parser(name="remove", help="Remove a Repository")
+    remove_repo_parser.add_argument("name", help="The name of the Repository to remove")
     
     args = parser.parse_args()
     
@@ -316,3 +331,10 @@ if __name__ == '__main__':
         get_outdated_packages(from_repo=args.fromrepo)
     elif args.action == "upgrade":
         upgrade_outdated(silent=muted)
+    elif args.action == "repo":
+        if args.repo_action == "add":
+            add_repo(name=args.name, url=args.url)
+            update_index_files(silent=muted)
+        elif args.repo_action == "remove":
+            remove_repo(name=args.name)
+            update_index_files(silent=muted)
