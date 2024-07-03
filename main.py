@@ -161,10 +161,17 @@ def list_all(silent: bool = False) -> dict:
     return pkgs
 
 
-def get(name, silent: bool = False) -> str | None:
+def get(name, silent: bool = False, from_repo: str = None) -> str | None:
     global cur_chunk, total_chunks, do_not_give_output
     if not silent: print(f"{QUOTE_SYMBOL_DOING}Searching for {name} in{QUOTE_SYMBOL_DOING}")
-    repos = getrepos()
+    if from_repo is not None:
+        if from_repo in getrepos():
+            repos = {from_repo: getrepos()[from_repo]}
+        else:
+            if not silent: print(f"{QUOTE_SYMBOL_ERROR}Repo {from_repo} not found")
+            return
+    else:
+        repos = getrepos()
     selected_repo = None
     for r in repos.keys():
         if not silent: print(f"{QUOTE_SYMBOL_DOING}{r}{QUOTE_SYMBOL_DOING}", end="\r")
@@ -226,7 +233,7 @@ def get_outdated_packages(silent: bool = False) -> list:
 
 
 def install(pkg, silent: bool = False, from_repo: str = None) -> bool:
-    dl_pkg = get(pkg, silent)
+    dl_pkg = get(pkg, silent, from_repo=from_repo)
     if dl_pkg is None:
         if not silent: print(f"{QUOTE_SYMBOL_ERROR}Download Error. Please update your Repositories{QUOTE_SYMBOL_ERROR}")
         return False
