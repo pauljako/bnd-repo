@@ -119,9 +119,16 @@ def loadrepo(repo_name) -> dict | None:
     return repo
 
 
-def search(name: str, silent: bool = False, exact: bool = False) -> dict:
+def search(name: str, silent: bool = False, exact: bool = False, from_repo: str = None) -> dict:
     found = {}
-    repos = getrepos()
+    if from_repo is not None:
+        if from_repo in getrepos():
+            repos = {from_repo: getrepos()[from_repo]}
+        else:
+            if not silent: print(f"{QUOTE_SYMBOL_ERROR}Repo {from_repo} not found{QUOTE_SYMBOL_ERROR}")
+            return {}
+    else:
+        repos = getrepos()
     if not silent: print(f"{QUOTE_SYMBOL_OUTPUT}Results for {name}:")
     for repo in repos.keys():
         index = loadrepo(repo)
@@ -145,9 +152,16 @@ def search(name: str, silent: bool = False, exact: bool = False) -> dict:
     return found
 
 
-def list_all(silent: bool = False) -> dict:
+def list_all(silent: bool = False, from_repo: str = None) -> dict:
     pkgs = {}
-    repos = getrepos()
+    if from_repo is not None:
+        if from_repo in getrepos():
+            repos = {from_repo: getrepos()[from_repo]}
+        else:
+            if not silent: print(f"{QUOTE_SYMBOL_ERROR}Repo {from_repo} not found{QUOTE_SYMBOL_ERROR}")
+            return
+    else:
+        repos = getrepos()
     if not silent: print(f"{QUOTE_SYMBOL_OUTPUT}List of all available packages:")
     for repo in repos.keys():
         index = loadrepo(repo)
@@ -168,8 +182,8 @@ def get(name, silent: bool = False, from_repo: str = None) -> str | None:
         if from_repo in getrepos():
             repos = {from_repo: getrepos()[from_repo]}
         else:
-            if not silent: print(f"{QUOTE_SYMBOL_ERROR}Repo {from_repo} not found")
-            return
+            if not silent: print(f"{QUOTE_SYMBOL_ERROR}Repo {from_repo} not found{QUOTE_SYMBOL_ERROR}")
+            return None
     else:
         repos = getrepos()
     selected_repo = None
@@ -213,16 +227,16 @@ def get(name, silent: bool = False, from_repo: str = None) -> str | None:
     return filename
 
 
-def get_outdated_packages(silent: bool = False) -> list:
+def get_outdated_packages(silent: bool = False, from_repo: str = None) -> list:
     outdated_pkgs = []
     pkgs = boundaries.get_packages()
     if not silent: print(f"{QUOTE_SYMBOL_OUTPUT}List of outdated Packages:")
     for pkg in pkgs:
-        info = boundaries.getpkginfo(pkg)
+        info = boundaries.getpkginfo(packagename=pkg)
         if info is not None and ("version" in info):
-            result = search(pkg, True, True)
+            result = search(name=pkg, silent=True, exact=True, from_repo=from_repo)
             if pkg in result:
-                contained_repo = loadrepo(result[pkg])
+                contained_repo = loadrepo(repo_name=result[pkg])
                 if pkg in contained_repo:
                     pkg_in_repo = contained_repo[pkg]
                     if "version" in pkg_in_repo:
@@ -269,27 +283,36 @@ if __name__ == '__main__':
     update_parser = subcommand.add_parser(name="update", help="Update the Repositories")
     
     search_parser = subcommand.add_parser(name="search", help="Search for Packages")
-    search_parser.add_argument("--force-repo", help="Force the use of a specific Repository")
+    search_parser.add_argument("--force-repo", help="Force the use of a specific Repository", default=None, dest="fromrepo")
     search_parser.add_argument("term", help="The Search Term")
     
     list_parser = subcommand.add_parser(name="list", help="List available Packages")
+    list_parser.add_argument("--force-repo", help="Force the use of a specific Repository", default=None, dest="fromrepo")
     list_parser.add_argument("--outdated", action="store_true", help="Only List outdated Packages")
     
     upgrade_parser = subcommand.add_parser(name="upgrade", help="Upgrade outdated Packages")
+    
+    repo_parser = subcommand.add_parser(name="repo", help="Manage Repositories")
+    
+    repo_subcommand = repo_parser.add_subparsers(title="Actions", dest="repo_action")
+    
+    add_repo_parser = repo_subcommand.add_parser(name="add", help="Add a Repository")
+    add_repo_parser.add_argument("name", help="The Name of the Repository")
+    add_repo_parser.add_argument("url", "The Path/Url to the Repository")
     
     args = parser.parse_args()
     
     muted = config["silent"]
     
     if args.action == "install":
-        install(args.package, from_repo=args.fromrepo)
+        install(pkg=args.package, from_repo=args.fromrepo)
     elif args.action == "update":
-        update_index_files(muted)
+        update_index_files(silent=muted)
     elif args.action == "search":
-        search(sys.argv[2])
+        search(name=args.term, from_repo=args.fromrepo)
     elif args.action == "list" and not args.outdated:
-        list_all()
+        list_all(from_repo=args.fromrepo)
     elif args.action == "list" and args.outdated:
-        get_outdated_packages()
+        get_outdated_packages(from_repo=args.fromrepo)
     elif args.action == "upgrade":
-        upgrade_outdated(muted)
+        upgrade_outdated(silent=muted)
